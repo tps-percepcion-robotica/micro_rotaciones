@@ -32,8 +32,8 @@ static const char *TAG = "ROTACIONES_MICROROS";
 #define MICRO_ROS_APP_STACK      16000
 #define MICRO_ROS_APP_TASK_PRIO  5
 
-#define PUBLISH_PERIOD_MS 20
-#define N_STEPS 1000
+#define PUBLISH_PERIOD_MS 100
+#define N_STEPS 500
 
 static rcl_publisher_t vector_publisher;
 static rcl_publisher_t vector_microrotado_publisher;
@@ -44,9 +44,12 @@ static rcl_subscription_t euler_subscriber;
 static geometry_msgs__msg__Vector3 vector_original;
 static geometry_msgs__msg__Vector3 euler_angles;
 static geometry_msgs__msg__Vector3 vector_rotado;
-static geometry_msgs__msg__Vector3 vector_original;
+static geometry_msgs__msg__Vector3 vector_microrotado;
 
-// Callback para recibir los datos del topico /vector
+static geometry_msgs__msg__Vector3 msg_vector_in;
+static geometry_msgs__msg__Vector3 msg_euler_in;
+
+// Callback para recibir los datos del topico vector
 void vector_sub_callback(const void * msgin) {
     const geometry_msgs__msg__Vector3 * msg = (const geometry_msgs__msg__Vector3 *)msgin;
     vector_original.x = msg->x;
@@ -54,15 +57,13 @@ void vector_sub_callback(const void * msgin) {
     vector_original.z = msg->z;
 }
 
-// Callback para recibir los datos del topico /euler
+// Callback para recibir los datos del topico euler
 void euler_sub_callback(const void * msgin) {
     const geometry_msgs__msg__Vector3 * msg = (const geometry_msgs__msg__Vector3 *)msgin;
     euler_angles.x = msg->x; // roll
     euler_angles.y = msg->y; // pitch
     euler_angles.z = msg->z; // yaw
 }
-
-// TODO : Implementar una funcion que reciba los datos de los topicos /vector y /euler y realice la rotacion del vector original, para luego publicar el vector rotado en el topico /vector_rotado usando rotaciones.
 
 static void rotar_vector(
     geometry_msgs__msg__Vector3 *vector, 
@@ -72,50 +73,18 @@ static void rotar_vector(
     float roll = euler->x; 
     float pitch = euler->y;
     float yaw = euler->z;
-
+    
     float cx = cos(roll);
     float sx = sin(roll);
     float cy = cos(pitch);
     float sy = sin(pitch);
     float cz = cos(yaw);
     float sz = sin(yaw);
-
+    
     // Rz * Ry * Rx * v
     vector_rotado->x = vector->x*(cy*cz) + vector->y*(sx*sy*cz - cx*sz) + vector->z*(cx*sy*cz + sx*sz);
     vector_rotado->y = vector->x*(cy*sz) + vector->y*(sx*sy*sz + cx*cz) + vector->z*(cx*sy*sz - sx*cz);
     vector_rotado->z = vector->x*(-sy) + vector->y*(sx*cy) + vector->z*(cx*cy);
-}
-
-// TODO : Implementar una funcion que reciba los datos de los topicos /vector y /euler y realice la rotacion del vector original, para luego publicar el vector rotado en el topico /vector_microrotado usando microrotaciones.
-
-static void microrotar_vector(
-    geometry_msgs__msg__Vector3 *vector, 
-    geometry_msgs__msg__Vector3 *euler, 
-    geometry_msgs__msg__Vector3 *vector_rotado) 
-{
-    vector_rotado->x = vector->x;
-    vector_rotado->y = vector->y;
-    vector_rotado->z = vector->z;
-
-    // 2. Calcular el diferencial para cada eje
-    float roll = euler->x / N_STEPS;
-    float pitch = euler->y / N_STEPS;
-    float yaw = euler->z / N_STEPS;
-
-    // 3. Microrotaciones sobre X (roll)
-    for (int i = 0; i < N_STEPS; i++) {
-        calcular_micro_rotacion(vector_rotado, 0, 0, roll);
-    }
-
-    // 4. Microrotaciones sobre Y (pitch)
-    for (int i = 0; i < N_STEPS; i++) {
-        calcular_micro_rotacion(vector_rotado, 0, pitch, 0);
-    }
-
-    // 5. Microrotaciones sobre Z (yaw)
-    for (int i = 0; i < N_STEPS; i++) {
-        calcular_micro_rotacion(vector_rotado, yaw, 0, 0);
-    }
 }
 
 static void calcular_micro_rotacion(
@@ -131,7 +100,35 @@ static void calcular_micro_rotacion(
     vector->z = z_new;
 }
 
-// TODO : Implementar una funcion que muestre el valor del vector original, el vector rotado y el vector microrotado en la terminal, para poder verificar que la rotacion se esta realizando correctamente.
+static void microrotar_vector(
+    geometry_msgs__msg__Vector3 *vector, 
+    geometry_msgs__msg__Vector3 *euler, 
+    geometry_msgs__msg__Vector3 *vector_microrotado) 
+{
+    vector_microrotado->x = vector->x;
+    vector_microrotado->y = vector->y;
+    vector_microrotado->z = vector->z;
+
+    // Calcular el diferencial para cada eje
+    float roll = euler->x / N_STEPS;
+    float pitch = euler->y / N_STEPS;
+    float yaw = euler->z / N_STEPS;
+
+    // Microrotaciones sobre X (roll)
+    for (int i = 0; i < N_STEPS; i++) {
+        calcular_micro_rotacion(vector_microrotado, 0, 0, roll);
+    }
+
+    // Microrotaciones sobre Y (pitch)
+    for (int i = 0; i < N_STEPS; i++) {
+        calcular_micro_rotacion(vector_microrotado, 0, pitch, 0);
+    }
+
+    // Microrotaciones sobre Z (yaw)
+    for (int i = 0; i < N_STEPS; i++) {
+        calcular_micro_rotacion(vector_microrotado, yaw, 0, 0);
+    }
+}
 
 static void timer_callback(rcl_timer_t *timer, int64_t last_call_time){
     
@@ -152,14 +149,10 @@ static void timer_callback(rcl_timer_t *timer, int64_t last_call_time){
              vector_microrotado.x, vector_microrotado.y, vector_microrotado.z);
 }
 
-// TODO : Configurar el publicador del topico /vector_rotado y /vector_microrotado, para publicar los datos del vector rotado y el vector microrotado respectivamente.
-// TODO : Configurar los subsriptores de los topico /vector y /euler
 static void micro_ros_task(void *arg){
     while (1) {
-        // 1. ESPERA / PING AL AGENTE
         ESP_LOGI(TAG, "Verificando Agente en IP: %s | Puerto: %s", CONFIG_MICRO_ROS_AGENT_IP, CONFIG_MICRO_ROS_AGENT_PORT);
         
-
         rcl_allocator_t allocator = rcl_get_default_allocator();
         rclc_support_t support;
 
@@ -171,26 +164,24 @@ static void micro_ros_task(void *arg){
         RCCHECK(rmw_uros_options_set_udp_address(CONFIG_MICRO_ROS_AGENT_IP,
                                              CONFIG_MICRO_ROS_AGENT_PORT,
                                              rmw_options));
-                                             
 #endif
 
-        // Intentar conectar con el agente directamente vía support_init
         rcl_ret_t rc = rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator);
 
         if (rc != RCL_RET_OK) {
             ESP_LOGW(TAG, "No se pudo conectar con el Agente (error %d). Reintentando en 2s...", (int)rc);
-            rcl_init_options_fini(&init_options);
+            (void)rcl_init_options_fini(&init_options);
             vTaskDelay(pdMS_TO_TICKS(2000));
-            continue; // Reintentar en el ciclo while
+            continue; 
         }
 
         ESP_LOGI(TAG, "¡Conectado exitosamente al Agente!");
 
         rcl_node_t node = rcl_get_zero_initialized_node();
-        RCCHECK(rclc_node_init_default(&node, "potenciometro_node", "", &support));
+        RCCHECK(rclc_node_init_default(&node, "rotaciones_node", "", &support));
         ESP_LOGI(TAG, "Nodo creado correctamente");
 
-        // Publicadores de topicos /vector_rotado y /vector_microrotado
+        // --- PUBLICADORES --- (Nombres relativos, sin barra inicial)
         RCCHECK(rclc_publisher_init_default(
             &vector_publisher, &node,
             ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Vector3),
@@ -201,7 +192,7 @@ static void micro_ros_task(void *arg){
             ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Vector3),
             "vector_microrotado"));
 
-        // Suscriptores de topicos /vector y /euler
+        // --- SUSCRIPTORES --- (Nombres relativos, sin barra inicial)
         RCCHECK(rclc_subscription_init_default(
             &vector_subscriber, &node,
             ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Vector3),
@@ -212,29 +203,36 @@ static void micro_ros_task(void *arg){
             ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Vector3),
             "euler"));
 
+        // --- TIMER ---
         rcl_timer_t timer = rcl_get_zero_initialized_timer();
         RCCHECK(rclc_timer_init_default2(
             &timer, &support, RCL_MS_TO_NS(PUBLISH_PERIOD_MS), timer_callback, true));
 
+        // --- EXECUTOR --- (3 handles totales: 1 timer + 2 subs)
         rclc_executor_t executor = rclc_executor_get_zero_initialized_executor();
         RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));
-        RCCHECK(rclc_executor_set_timeout(&executor, RCL_MS_TO_NS(1)));
+        // RCCHECK(rclc_executor_set_timeout(&executor, RCL_MS_TO_NS(1)));
+
+        // Agregar elementos al executor
+        RCCHECK(rclc_executor_add_timer(&executor, &timer));
+        RCCHECK(rclc_executor_add_subscription(&executor, &vector_subscriber, &msg_vector_in, &vector_sub_callback, ON_NEW_DATA));
+        RCCHECK(rclc_executor_add_subscription(&executor, &euler_subscriber, &msg_euler_in, &euler_sub_callback, ON_NEW_DATA));
 
         // Bucle de publicación
         while (1) {
-            rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1));
+            rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
             vTaskDelay(pdMS_TO_TICKS(10));
         }
 
-        // Limpieza si sale del bucle
-        rcl_publisher_fini(&vector_publisher, &node);
-        rcl_publisher_fini(&vector_microrotado_publisher, &node);
-        rcl_subscription_fini(&vector_subscriber, &node);
-        rcl_subscription_fini(&euler_subscriber, &node);
-        rcl_timer_fini(&timer);
-        rclc_executor_fini(&executor);
-        rcl_node_fini(&node);
-        rclc_support_fini(&support);
+        // Limpieza si se desconecta (Casteos a void para omitir warnings)
+        (void)rcl_publisher_fini(&vector_publisher, &node);
+        (void)rcl_publisher_fini(&vector_microrotado_publisher, &node);
+        (void)rcl_subscription_fini(&vector_subscriber, &node);
+        (void)rcl_subscription_fini(&euler_subscriber, &node);
+        (void)rcl_timer_fini(&timer);
+        (void)rclc_executor_fini(&executor);
+        (void)rcl_node_fini(&node);
+        (void)rclc_support_fini(&support);
 
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
