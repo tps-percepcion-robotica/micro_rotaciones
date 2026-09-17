@@ -5,7 +5,7 @@ Grupo: Francisco Soria, Martin Bravo, Cande Benavides, Dolores Gómez, Tatiana P
 Firmware para ESP32 que recibe un vector (X, Y, Z) y un vector de rotaciones (roll, pitch, yaw)
 como valores ingresados por consola y enviados por un agente UDP de microros como topicos de ROS 2
 dentro del nodo de microros en el ESP se reciben estos datos, se calcula la rotacion del vector 
-usando microrotaciones y se devuelve el vector rotado con un publisher.
+usando matrices de rotaciones y microrotaciones y se devuelven dos vectores rotados con un publisher.
 
 ## Objetivos
 
@@ -38,7 +38,8 @@ potenciometro/
 | ------------- | -------------------- | ----------------------------------- |
 | `/vector`     |   | Un vector con componentes en x, y , z       |
 | `/euler`      |  | Un vector de angulos con rotaciones roll, pitch, yaw |
-| `/vector_rotado`     |   | El vector micro-rotado con componentes en x, y , z       |
+| `/vector_rotado`     |   | El vector rotado con componentes en x, y , z       |
+| `/vector_microrotado`     |   | El vector micro-rotado con componentes en x, y , z       |
 
 ## Cómo compilar y flashear
 
