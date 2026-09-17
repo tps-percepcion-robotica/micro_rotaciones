@@ -9,8 +9,11 @@ usando matrices de rotaciones y microrotaciones y se devuelven dos vectores rota
 
 ## Objetivos
 
-- Implementar un nodo en el ESP32 usando micro-ROS que calcule y publique la rotacion de un vector usando microrotaciones.
-- Visualizar y validar los datos de la rotacion calculada usando un nodo de ros2 con una interfaz en matplotlib que muestre en tres plots distintos el grafico del vector sin rotar, grafico del vector microrotado y grafico del vector rotado con calculo convencional.
+- Implementar un nodo en el ESP32 usando micro-ROS que calcule y publique la rotacion de un vector usando 
+microrotaciones y rotaciones por multiplicacion de matrices.
+- Visualizar y validar los datos de la rotacion calculada usando un nodo de ros2 con una interfaz en matplotlib 
+que muestre en tres plots distintos (el grafico del vector sin rotar, el grafico del vector microrotado y 
+el grafico del vector rotado con calculo convencional).
 
 ## Hardware
 
@@ -36,10 +39,10 @@ potenciometro/
 
 | Tópico       | Tipo                 | Descripción                        |
 | ------------- | -------------------- | ----------------------------------- |
-| `/vector`     |   | Un vector con componentes en x, y , z       |
-| `/euler`      |  | Un vector de angulos con rotaciones roll, pitch, yaw |
-| `/vector_rotado`     |   | El vector rotado con componentes en x, y , z       |
-| `/vector_microrotado`     |   | El vector micro-rotado con componentes en x, y , z       |
+| `/vector`     | Vector3 | Un vector con componentes en x, y , z       |
+| `/euler`      | Vector3 | Un vector de angulos con rotaciones roll, pitch, yaw |
+| `/vector_rotado`     | Vector3 | El vector rotado con componentes en x, y , z  |
+| `/vector_microrotado`     | Vector3 | El vector micro-rotado con componentes en x, y , z  |
 
 ## Cómo compilar y flashear
 
@@ -75,11 +78,23 @@ ros2 topic list
 ros2 topic echo /vector
 ros2 topic echo /euler
 ros2 topic echo /vector_rotado
+ros2 topic echo /vector_microrotado
 ```
 
 ## Visualización y log de datos
 
+La primera vez hacer un entorno virtual y descargar custom tkinter y matplotlib
+
 ```bash
+source /opt/ros/jazzy/setup.bash
+python3 -m venv .venv --system-site-packages
+source .venv/bin/activate
+pip install customtkinter matplotlib
+```
+
+Si ya esta el entorno virtual creado ejecutar en una consola nueva con ros2 sourceado
+```bash
+source .venv/bin/activate
 cd pc_tools
 python3 rotaciones_monitor.py
 ```
