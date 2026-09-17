@@ -36,13 +36,12 @@ potenciometro/
 ```
 
 ## Tópicos publicados
-
-| Tópico       | Tipo                 | Descripción                        |
+| Tópico | Tipo | Descripción |
 | ------------- | -------------------- | ----------------------------------- |
-| `/vector`     | Vector3 | Un vector con componentes en x, y , z       |
-| `/euler`      | Vector3 | Un vector de angulos con rotaciones roll, pitch, yaw |
-| `/vector_rotado`     | Vector3 | El vector rotado con componentes en x, y , z  |
-| `/vector_microrotado`     | Vector3 | El vector micro-rotado con componentes en x, y , z  |
+| `/vector` | Vector3 | Un vector con componentes en x, y , z |
+| `/euler` | Vector3 | Un vector de angulos con rotaciones roll, pitch, yaw |
+| `/vector_rotado` | Vector3 | El vector rotado con componentes en x, y , z |
+| `/vector_microrotado` | Vector3 | El vector micro-rotado con componentes en x, y , z |
 
 ## Cómo compilar y flashear
 
