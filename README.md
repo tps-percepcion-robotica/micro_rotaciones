@@ -2,9 +2,9 @@
 
 Grupo: Francisco Soria, Martin Bravo, Cande Benavides, Dolores Gómez, Tatiana Pagano, Abigail Barbieri
 
-Firmware para ESP32 que recibe un vector (X, Y, Z) y un vector de rotaciones (roll, pitch, yaw)
-como valores ingresados por consola y enviados por un agente UDP de microros como topicos de ROS 2
-dentro del nodo de microros en el ESP se reciben estos datos, se calcula la rotacion del vector 
+Firmware para ESP32 que recibe un vector (X, Y, Z) y un vector de angulos de rotación sobre cada eje (roll, pitch, yaw) 
+como valores ingresados por el usuario. estos datos son enviados por un agente UDP como topicos de ROS2
+y recibidos por el nodo de micro-ros que corre en el ESP32. Dentro del microcontrolador se calcula la rotacion del vector 
 usando matrices de rotaciones y microrotaciones y se devuelven dos vectores rotados con un publisher.
 
 ## Objetivos
